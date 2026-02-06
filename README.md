@@ -5,47 +5,37 @@
 
 ## 1. Overview
 
-This project analyzes **damped harmonic motion** of a mass–spring system using experimentally recorded position–time data. The primary objective is to **estimate the damping coefficient** \( c \) and **damping ratio** \( \zeta \) from oscillatory decay using **peak detection and logarithmic decrement methods**.
+This project analyzes **damped harmonic motion** of a mass–spring system using experimentally recorded position–time data. The primary objective is to **estimate the damping coefficient** and **damping ratio** from oscillatory decay using **peak detection** and **logarithmic decrement** methods.
 
-Two complementary approaches are implemented:
-
-1. **Time-domain exponential decay fitting** using individual peak amplitudes  
-2. **Logarithmic decrement averaging** across successive oscillation peaks  
-
-Both methods rely on identifying local maxima in the displacement signal and filtering noise-induced false peaks.
+All mathematical expressions are rendered using **Codecogs equation images** to ensure correct display on GitHub and other Markdown renderers.
 
 ---
 
 ## 2. Physical Model
 
-We assume a **linear, underdamped, single-degree-of-freedom system** governed by:
+We assume a **linear, underdamped, single-degree-of-freedom mass–spring–damper system** governed by:
 
-\[
-m \ddot{x} + c \dot{x} + k x = 0
-\]
+![equation](https://latex.codecogs.com/svg.latex?m%5Cddot%7Bx%7D%2Bc%5Cdot%7Bx%7D%2Bkx%3D0)
 
 where:
-- \( m \) = mass (kg)  
-- \( c \) = viscous damping coefficient (N·s/m)  
-- \( k \) = spring constant (N/m)  
-- \( x(t) \) = displacement (m)
+- **m** — mass (kg)  
+- **c** — viscous damping coefficient (N·s/m)  
+- **k** — spring constant (N/m)  
+- **x(t)** — displacement (m)
 
 ---
 
 ### 2.1 Underdamped Solution
 
-For \( \zeta < 1 \), the displacement is:
+For an underdamped system (ζ < 1), the displacement response is:
 
-\[
-x(t) = A e^{-\frac{c}{2m} t} \cos(\omega_d t + \phi)
-\]
+![equation](https://latex.codecogs.com/svg.latex?x%28t%29%3DAe%5E%7B-%5Cfrac%7Bc%7D%7B2m%7Dt%7D%5Ccos%28%5Comega_d%20t%2B%5Cphi%29)
 
-where:
-\[
-\omega_d = \sqrt{\frac{k}{m} - \left(\frac{c}{2m}\right)^2}
-\]
+where the damped natural frequency is:
 
-The **exponential envelope** governs the decay of oscillation peak amplitudes.
+![equation](https://latex.codecogs.com/svg.latex?%5Comega_d%3D%5Csqrt%7B%5Cfrac%7Bk%7D%7Bm%7D-%5Cleft%28%5Cfrac%7Bc%7D%7B2m%7D%5Cright%29%5E2%7D)
+
+The exponential term defines the **decay envelope** used for damping estimation.
 
 ---
 
@@ -53,13 +43,13 @@ The **exponential envelope** governs the decay of oscillation peak amplitudes.
 
 ### 3.1 Input Files
 
-Each dataset is a CSV file named according to:
+Each dataset is stored as a CSV file using the naming convention:
 
 ```
 <mass>g_trial_<n>.csv
 ```
 
-or (for batch processing):
+or, for batch processing:
 
 ```
 physics_data/<mass>g_trial_<n>.csv
@@ -83,88 +73,43 @@ k = 5886  # Spring constant (N/m)
 masses = [40, 60, 80, 100, 120, 140]  # grams
 ```
 
-Mass units are treated consistently across all trials.
-
 ---
 
 ## 4. Signal Processing Pipeline
 
 ### 4.1 Peak Detection
 
-Oscillation peaks are detected using SciPy:
+Oscillation peaks are identified using SciPy’s `find_peaks` function. To suppress noise-induced artifacts, peaks below a minimum displacement threshold are discarded:
 
-```python
-from scipy.signal import find_peaks
-peaks, _ = find_peaks(position)
-```
+![equation](https://latex.codecogs.com/svg.latex?x_%7Bpeak%7D%5Cge0.2%5Ctext%7Bm%7D)
 
-To suppress noise-induced false peaks, a minimum displacement threshold is applied:
-
-\[
-x_{\text{peak}} \ge 0.2 \text{ m}
-\]
-
-This ensures only physically meaningful oscillation maxima are retained.
+Only physically meaningful oscillation maxima are retained for analysis.
 
 ---
 
-### 4.2 Peak Amplitude Selection
+## 5. Method 1 — Damping Coefficient via Exponential Decay
 
-```python
-peak_amplitudes = position[peaks]
-```
+For a detected peak at time **tₙ** with amplitude **Aₙ**, the decay envelope satisfies:
 
-The reference amplitude is chosen as:
+![equation](https://latex.codecogs.com/svg.latex?A_n%3DA_0e%5E%7B-%5Cfrac%7Bc%7D%7B2m%7Dt_n%7D)
 
-\[
-A_0 = \max(A_n)
-\]
+Solving for the damping coefficient yields:
 
-This compensates for cases where the true initial peak is not detected.
+![equation](https://latex.codecogs.com/svg.latex?c_n%3D-%5Cfrac%7B2m%7D%7Bt_n%7D%5Cln%5Cleft%28%5Cfrac%7BA_n%7D%7BA_0%7D%5Cright%29)
 
----
-
-## 5. Method 1 — Damping Coefficient from Exponential Decay
-
-For a peak occurring at time \( t_n \) with amplitude \( A_n \):
-
-\[
-A_n = A_0 e^{-\frac{c}{2m} t_n}
-\]
-
-Solving for the damping coefficient:
-
-\[
-\boxed{
- c_n = -\frac{2m}{t_n} \ln\left(\frac{A_n}{A_0}\right)
-}
-\]
-
-Each detected peak produces an instantaneous estimate of \( c \).
-
----
+Each oscillation peak produces an instantaneous estimate of **c**.
 
 ### 5.1 Averaging
 
-The final damping coefficient is computed as:
+The final damping coefficient is computed as the arithmetic mean:
 
-\[
-\bar{c} = \frac{1}{N} \sum_{n=1}^{N} c_n
-\]
-
----
+![equation](https://latex.codecogs.com/svg.latex?%5Cbar%7Bc%7D%3D%5Cfrac%7B1%7D%7BN%7D%5Csum_%7Bn%3D1%7D%5ENc_n)
 
 ### 5.2 Damping Ratio
 
-The damping ratio is obtained via:
+The damping ratio is obtained from:
 
-\[
-\boxed{
- \zeta = \frac{\bar{c}}{2\sqrt{k m}}
-}
-\]
-
-This provides a normalized measure of damping independent of system mass.
+![equation](https://latex.codecogs.com/svg.latex?%5Czeta%3D%5Cfrac%7B%5Cbar%7Bc%7D%7D%7B2%5Csqrt%7Bkm%7D%7D)
 
 ---
 
@@ -172,53 +117,35 @@ This provides a normalized measure of damping independent of system mass.
 
 The logarithmic decrement between successive peaks is defined as:
 
-\[
-\delta_n = \ln\left(\frac{A_n}{A_{n+1}}\right)
-\]
+![equation](https://latex.codecogs.com/svg.latex?%5Cdelta_n%3D%5Cln%5Cleft%28%5Cfrac%7BA_n%7D%7BA_%7Bn%2B1%7D%7D%5Cright%29)
 
-The mean decrement is:
+The mean logarithmic decrement is:
 
-\[
-\bar{\delta} = \frac{1}{N-1} \sum_{n=1}^{N-1} \delta_n
-\]
+![equation](https://latex.codecogs.com/svg.latex?%5Cbar%7B%5Cdelta%7D%3D%5Cfrac%7B1%7D%7BN-1%7D%5Csum_%7Bn%3D1%7D%5E%7BN-1%7D%5Cdelta_n)
 
-The damping ratio is then calculated as:
+The damping ratio follows as:
 
-\[
-\boxed{
- \zeta =
- \frac{\bar{\delta}}{\sqrt{4\pi^2 + \bar{\delta}^2}}
-}
-\]
-
-This method is robust and does not rely on precise time measurements.
+![equation](https://latex.codecogs.com/svg.latex?%5Czeta%3D%5Cfrac%7B%5Cbar%7B%5Cdelta%7D%7D%7B%5Csqrt%7B4%5Cpi%5E2%2B%5Cbar%7B%5Cdelta%7D%5E2%7D%7D)
 
 ---
 
 ## 7. Visualization
 
-Optional diagnostic plots are included to verify peak detection and oscillatory decay.
-
-### 7.1 Position–Time Plot with Peaks
+Position–time plots with detected peaks are used for validation and diagnostics:
 
 ```python
 plt.plot(time, position)
 plt.scatter(time[peaks], peak_amplitudes)
 ```
 
-These plots are useful for:
-- Validating peak detection accuracy  
-- Verifying noise filtering  
-- Identifying anomalous trials  
-
 ---
 
 ## 8. Numerical Stability & Error Considerations
 
-- Peak thresholding reduces noise sensitivity  
-- Averaging across multiple peaks minimizes random error  
+- Noise thresholding reduces false peak detection  
+- Averaging across peaks minimizes random measurement error  
 - Logarithmic decrement avoids dependence on absolute amplitude calibration  
-- Early peaks have higher signal-to-noise ratios  
+- Early oscillation peaks have the highest signal-to-noise ratio
 
 ---
 
@@ -232,24 +159,18 @@ matplotlib
 scipy
 ```
 
-Install all dependencies with:
-
-```bash
-pip install numpy pandas matplotlib scipy
-```
-
 ---
 
 ## 10. Outputs
 
-- Printed average damping coefficient \( \bar{c} \) for each mass  
-- Printed damping ratio \( \zeta \) for each trial  
-- Optional plots suitable for lab reports  
+- Average damping coefficient for each mass  
+- Damping ratio for each experimental trial  
+- Diagnostic plots suitable for lab reports
 
 ---
 
 ## 11. Summary
 
-This project implements **two independent, theoretically grounded methods** for extracting damping properties from experimental oscillation data. Agreement between exponential decay fitting and logarithmic decrement analysis provides strong validation and aligns with classical vibration theory.
+This project implements **two independent, physics-consistent techniques** for extracting damping parameters from experimental oscillation data. Using Codecogs-rendered equations ensures full compatibility with GitHub Markdown while preserving mathematical rigor.
 
 ---
